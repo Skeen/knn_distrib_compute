@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "file-exists": "^2.0.0",
     "mkdirp": "^0.5.1",
     "request": "^2.78.0"
   }

@@ -1,13 +1,18 @@
 var request = require('request');
+var fs = require('fs');
+var mkdirp  = require('mkdirp');
+var fileExists = require('file-exists');
+var exec = require('child_process').exec;
 
 var retry_delay = 10000;
 var next_delay = 0;
-var server_url = "http://localhost:3001";
+var server_url = "http://skeen.website:3004";
 
 var request_task = function()
 {
     var await_task = function(callback)
     {
+        console.log();
         console.log("Awainting work...");
         request(server_url + "/awaitTask", function(err, response, body)
         {
@@ -24,6 +29,7 @@ var request_task = function()
 
     var get_task = function()
     {
+        console.log("Downloading work...");
         request(server_url + "/requestTask", function(err, response, body)
         {
             if(err)
@@ -65,14 +71,12 @@ var request_task = function()
     });
 }
 
-var mkdirp  = require('mkdirp');
 
 var work_folder   = 'work';
 // Ensure that folders are created
 var folder_callback = function(err) { if(err) console.error(err); };
 mkdirp(work_folder, folder_callback);
 
-var fs = require('fs');
 var write_file = function(filename, contents, callback)
 {
     fs.writeFile(filename, contents, function(err) 
@@ -90,7 +94,6 @@ var write_file = function(filename, contents, callback)
     }); 
 }
 
-var exec = require('child_process').exec;
 var knn_executable = './tools/clf.run';
 var run_knn_dtw = function(query, reference, knn, callback)
 {
@@ -99,10 +102,9 @@ var run_knn_dtw = function(query, reference, knn, callback)
 
 var prepare_dtw = function(task)
 {
-    console.log(task);
-
     var acquire_file = function(url, fileidentifier, callback)
     {
+        console.log("Downloading", fileidentifier);
         request(server_url + '/' + url, function(err, response, body)
         {
             if(err || response.statusCode != 200)
@@ -148,45 +150,56 @@ var prepare_dtw = function(task)
         });
     }
 
+    var run_knn = function(query_path, reference_path)
+    {
+        run_knn_dtw(query_path, reference_path, task.knn, function(err, result)
+        {
+            if(err)
+            {
+                console.error("Error running knn-dtw");
+                console.error(err);
+                setTimeout(request_task, retry_delay);
+            }
+            else
+            {
+                var json;
+                try
+                {
+                    json = JSON.parse(result);
+                }
+                catch(err)
+                {
+                    console.error("Unable to parse knn-dtw response");
+                    console.error(err);
+                    setTimeout(request_task, retry_delay);
+                    return;
+                }
+                send_response(json);
+            }
+        });
+    }
+
     acquire_file(task.query, "query", function(query)
     {
         var query_path = work_folder + '/' + task.name + "-QUERY";
-
-        // TODO: Only download reference is not yet available
-        acquire_file(task.reference, "reference", function(reference)
+        write_file(query_path, query, function()
         {
             var reference_path = work_folder + '/' + task.name + "-REFERENCE";
-            write_file(query_path, query, function()
+            if(fileExists(reference_path))
             {
-                write_file(reference_path, reference, function()
+                console.log("Using cached reference");
+                run_knn(query_path, reference_path);
+            }
+            else
+            {
+                acquire_file(task.reference, "reference", function(reference)
                 {
-                    run_knn_dtw(query_path, reference_path, task.knn, function(err, result)
+                    write_file(reference_path, reference, function()
                     {
-                        if(err)
-                        {
-                            console.error("Error running knn-dtw");
-                            console.error(err);
-                            setTimeout(request_task, retry_delay);
-                        }
-                        else
-                        {
-                            var json;
-                            try
-                            {
-                                json = JSON.parse(result);
-                            }
-                            catch(err)
-                            {
-                                console.error("Unable to parse knn-dtw response");
-                                console.error(err);
-                                setTimeout(request_task, retry_delay);
-                                return;
-                            }
-                            send_response(json);
-                        }
+                        run_knn(query_path, reference_path);
                     });
                 });
-            });
+            }
         });
     });
 }
