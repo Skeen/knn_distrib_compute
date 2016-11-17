@@ -171,6 +171,7 @@ var prepare_dtw = function(task)
                 {
                     console.error("Unable to parse knn-dtw response");
                     console.error(err);
+                    console.error(result);
                     setTimeout(request_task, retry_delay);
                     return;
                 }
