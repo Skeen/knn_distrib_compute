@@ -22,6 +22,7 @@ var request_task = function()
                 console.error(err);
                 console.error(body);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             callback();
         });
@@ -38,12 +39,14 @@ var request_task = function()
                 console.error(err);
                 console.error(body);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             else if(response.statusCode != 200)
             {
                 console.warn("Got non 200 status code");
                 console.warn(body);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             else
             {
@@ -86,6 +89,7 @@ var write_file = function(filename, contents, callback)
             console.error("Unable to write ", filename);
             console.error(err);
             setTimeout(request_task, retry_delay);
+            return;
         }
         else
         {
@@ -115,6 +119,7 @@ var prepare_dtw = function(task)
                 console.error(err);
                 console.error(body);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             else
             {
@@ -143,11 +148,13 @@ var prepare_dtw = function(task)
                 console.error(err);
                 console.error(body);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             else
             {
                 console.log("Succesfully uploaded a piece of work!");
                 setTimeout(request_task, next_delay);
+                return;
             }
         });
     }
@@ -161,6 +168,7 @@ var prepare_dtw = function(task)
                 console.error("Error running knn-dtw");
                 console.error(err);
                 setTimeout(request_task, retry_delay);
+                return;
             }
             else
             {
