@@ -45,7 +45,7 @@ var request_task = function()
             {
                 console.warn("Got non 200 status code");
                 console.warn(body);
-                setTimeout(request_task, retry_delay);
+                setTimeout(request_task, next_delay);
                 return;
             }
             else
