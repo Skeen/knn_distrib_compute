@@ -6,7 +6,7 @@ var exec = require('child_process').exec;
 
 var retry_delay = 10000;
 var next_delay = 0;
-var server_url = "http://skeen.website:3004";
+var server_url = "http://localhost:3001";
 
 var request_task = function()
 {
@@ -95,9 +95,11 @@ var write_file = function(filename, contents, callback)
 }
 
 var knn_executable = './tools/clf.run';
-var run_knn_dtw = function(query, reference, knn, callback)
+var run_knn_dtw = function(query, reference, callback)
 {
-    exec(knn_executable + ' --query_filename=' + query + ' --reference_filename=' + reference + ' --knn=' + knn, callback);
+    exec(knn_executable + ' --query_filename=' + query + ' --reference_filename=' + reference, 
+        {maxBuffer: Number.POSITIVE_INFINITY},
+            callback);
 }
 
 var prepare_dtw = function(task)
@@ -152,7 +154,7 @@ var prepare_dtw = function(task)
 
     var run_knn = function(query_path, reference_path)
     {
-        run_knn_dtw(query_path, reference_path, task.knn, function(err, result)
+        run_knn_dtw(query_path, reference_path, function(err, result)
         {
             if(err)
             {
@@ -180,6 +182,7 @@ var prepare_dtw = function(task)
         });
     }
 
+    console.log("Got work:", task.name, "part:", task.part);
     acquire_file(task.query, "query", function(query)
     {
         var query_path = work_folder + '/' + task.name + "-QUERY";
