@@ -80,24 +80,6 @@ var work_folder   = 'work';
 var folder_callback = function(err) { if(err) console.error(err); };
 mkdirp(work_folder, folder_callback);
 
-var write_file = function(filename, contents, callback)
-{
-    fs.writeFile(filename, contents, function(err) 
-    {
-        if(err) 
-        {
-            console.error("Unable to write ", filename);
-            console.error(err);
-            setTimeout(request_task, retry_delay);
-            return;
-        }
-        else
-        {
-            callback();
-        }
-    }); 
-}
-
 var knn_executable = './tools/clf.run';
 var run_knn_dtw = function(query, reference, dtw_args, callback)
 {
@@ -110,23 +92,48 @@ var run_knn_dtw = function(query, reference, dtw_args, callback)
 
 var prepare_dtw = function(task)
 {
-    var acquire_file = function(url, fileidentifier, callback)
+    var acquire_and_write_file = function(url, fileidentifier, path, callback)
     {
-        console.log("Downloading", fileidentifier);
-        request(server_url + '/' + url, function(err, response, body)
+        var write_file = function(filename, contents, callback)
         {
-            if(err || response.statusCode != 200)
+            fs.writeFile(filename, contents, function(err) 
             {
-                console.error("Unable to download " + fileidentifier + "-file");
-                console.error(err);
-                console.error(body);
-                setTimeout(request_task, retry_delay);
-                return;
-            }
-            else
+                if(err) 
+                {
+                    console.error("Unable to write ", filename);
+                    console.error(err);
+                    setTimeout(request_task, retry_delay);
+                    return;
+                }
+                else
+                {
+                    callback();
+                }
+            }); 
+        }
+
+        var acquire_file = function(url, fileidentifier, callback)
+        {
+            console.log("Downloading", fileidentifier);
+            request(server_url + '/' + url, function(err, response, body)
             {
-                callback(body);
-            }
+                if(err || response.statusCode != 200)
+                {
+                    console.error("Unable to download " + fileidentifier + "-file");
+                    console.error(err);
+                    console.error(body);
+                    setTimeout(request_task, retry_delay);
+                    return;
+                }
+                else
+                {
+                    callback(body);
+                }
+            });
+        }
+        acquire_file(url, fileidentifier, function(data)
+        {
+            write_file(path, data, callback);
         });
     }
 
@@ -195,28 +202,22 @@ var prepare_dtw = function(task)
     console.log("Got work:", task.name, "part:", task.part);
     var dtw_args = task.dtw_args || "";
 
-    acquire_file(task.query, "query", function(query)
+    var query_path = work_folder + '/' + task.name + "-QUERY";
+    acquire_and_write_file(task.query, "query", query_path, function()
     {
-        var query_path = work_folder + '/' + task.name + "-QUERY";
-        write_file(query_path, query, function()
+        var reference_path = work_folder + '/' + task.name + "-REFERENCE";
+        if(fileExists(reference_path))
         {
-            var reference_path = work_folder + '/' + task.name + "-REFERENCE";
-            if(fileExists(reference_path))
+            console.log("Using cached reference");
+            run_knn(query_path, reference_path, dtw_args);
+        }
+        else
+        {
+            acquire_and_write_file(task.reference, "reference", reference_path, function()
             {
-                console.log("Using cached reference");
                 run_knn(query_path, reference_path, dtw_args);
-            }
-            else
-            {
-                acquire_file(task.reference, "reference", function(reference)
-                {
-                    write_file(reference_path, reference, function()
-                    {
-                        run_knn(query_path, reference_path, dtw_args);
-                    });
-                });
-            }
-        });
+            });
+        }
     });
 }
 
