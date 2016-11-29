@@ -94,6 +94,7 @@ var prepare_dtw = function(task)
 {
     var acquire_and_write_file = function(url, fileidentifier, path, callback)
     {
+        /*
         var write_file = function(filename, contents, callback)
         {
             fs.writeFile(filename, contents, function(err) 
@@ -135,6 +136,14 @@ var prepare_dtw = function(task)
         {
             write_file(path, data, callback);
         });
+        */
+
+        console.log("Downloading", fileidentifier);
+        var command = 'curl -qs ' + server_url + '/' + url + ' -o ' + path;
+        console.log("Running", command);
+        exec(command,
+                {maxBuffer: Number.POSITIVE_INFINITY},
+                callback);
     }
 
     var send_response = function(result)
