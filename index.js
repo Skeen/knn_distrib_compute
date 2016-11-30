@@ -3,10 +3,13 @@ var fs = require('fs');
 var mkdirp  = require('mkdirp');
 var fileExists = require('file-exists');
 var exec = require('child_process').exec;
+var os = require('os');
 
 var retry_delay = 10000;
 var next_delay = 0;
 var server_url = "http://localhost:3001";
+var hostname = os.hostname();
+console.log("Name:", hostname);
 
 var request_task = function()
 {
@@ -31,7 +34,7 @@ var request_task = function()
     var get_task = function()
     {
         console.log("Downloading work...");
-        request(server_url + "/requestTask", function(err, response, body)
+        request(server_url + "/requestTask?name=" + hostname, function(err, response, body)
         {
             if(err)
             {
