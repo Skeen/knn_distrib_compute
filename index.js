@@ -154,7 +154,7 @@ var prepare_dtw = function(task)
 
     var send_response = function(result)
     {
-        var options = {
+        var post_options = {
             uri: options.server_url + '/replyTask',
             method: 'POST',
             json: {
@@ -164,7 +164,7 @@ var prepare_dtw = function(task)
             }
         };
 
-        request(options, function(err, response, body) 
+        request(post_options, function(err, response, body) 
         {
             if (err || response.statusCode != 200) 
             {
