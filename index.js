@@ -5,9 +5,12 @@ var fileExists = require('file-exists');
 var exec = require('child_process').exec;
 var os = require('os');
 
-var retry_delay = 10000;
-var next_delay = 0;
-var server_url = "http://localhost:3001";
+var options = {};
+options.override_files = false;
+options.server_url = "http://localhost:3001";
+options.retry_delay = 10000;
+options.next_delay = 0;
+
 var hostname = os.hostname();
 console.log("Name:", hostname);
 
@@ -17,14 +20,14 @@ var request_task = function()
     {
         console.log();
         console.log("Awainting work...");
-        request(server_url + "/awaitTask", function(err, response, body)
+        request(options.server_url + "/awaitTask", function(err, response, body)
         {
             if(err)
             {
                 console.error("Got error awaiting task");
                 console.error(err);
                 console.error(body);
-                setTimeout(request_task, retry_delay);
+                setTimeout(request_task, options.retry_delay);
                 return;
             }
             callback();
@@ -34,21 +37,21 @@ var request_task = function()
     var get_task = function()
     {
         console.log("Downloading work...");
-        request(server_url + "/requestTask?name=" + hostname, function(err, response, body)
+        request(options.server_url + "/requestTask?name=" + hostname, function(err, response, body)
         {
             if(err)
             {
                 console.error("Got error requesting task");
                 console.error(err);
                 console.error(body);
-                setTimeout(request_task, retry_delay);
+                setTimeout(request_task, options.retry_delay);
                 return;
             }
             else if(response.statusCode != 200)
             {
                 console.warn("Got non 200 status code");
                 console.warn(body);
-                setTimeout(request_task, next_delay);
+                setTimeout(request_task, options.next_delay);
                 return;
             }
             else
@@ -63,7 +66,7 @@ var request_task = function()
                     console.error("Unable to parse JSON");
                     console.error(err);
                     console.error(body);
-                    setTimeout(request_task, retry_delay);
+                    setTimeout(request_task, options.retry_delay);
                     return;
                 }
                 prepare_dtw(json);
@@ -106,7 +109,7 @@ var prepare_dtw = function(task)
                 {
                     console.error("Unable to write ", filename);
                     console.error(err);
-                    setTimeout(request_task, retry_delay);
+                    setTimeout(request_task, options.retry_delay);
                     return;
                 }
                 else
@@ -126,7 +129,7 @@ var prepare_dtw = function(task)
                     console.error("Unable to download " + fileidentifier + "-file");
                     console.error(err);
                     console.error(body);
-                    setTimeout(request_task, retry_delay);
+                    setTimeout(request_task, options.retry_delay);
                     return;
                 }
                 else
@@ -142,7 +145,7 @@ var prepare_dtw = function(task)
         */
 
         console.log("Downloading", fileidentifier);
-        var command = 'curl -qs ' + server_url + '/' + url + ' -o ' + path;
+        var command = 'curl -qs ' + options.server_url + '/' + url + ' -o ' + path;
         console.log("Running", command);
         exec(command,
                 {maxBuffer: Number.POSITIVE_INFINITY},
@@ -152,7 +155,7 @@ var prepare_dtw = function(task)
     var send_response = function(result)
     {
         var options = {
-            uri: server_url + '/replyTask',
+            uri: options.server_url + '/replyTask',
             method: 'POST',
             json: {
                 name: task.name,
@@ -168,13 +171,13 @@ var prepare_dtw = function(task)
                 console.error("Unable to upload response");
                 console.error(err);
                 console.error(body);
-                setTimeout(request_task, retry_delay);
+                setTimeout(request_task, options.retry_delay);
                 return;
             }
             else
             {
                 console.log("Succesfully uploaded a piece of work!");
-                setTimeout(request_task, next_delay);
+                setTimeout(request_task, options.next_delay);
                 return;
             }
         });
@@ -188,7 +191,7 @@ var prepare_dtw = function(task)
             {
                 console.error("Error running knn-dtw");
                 console.error(err);
-                setTimeout(request_task, retry_delay);
+                setTimeout(request_task, options.retry_delay);
                 return;
             }
             else
@@ -203,7 +206,7 @@ var prepare_dtw = function(task)
                     console.error("Unable to parse knn-dtw response");
                     console.error(err);
                     console.error(result);
-                    setTimeout(request_task, retry_delay);
+                    setTimeout(request_task, options.retry_delay);
                     return;
                 }
                 send_response(json);
@@ -211,13 +214,25 @@ var prepare_dtw = function(task)
         });
     }
 
+    var gen_filename = function(postfix, override)
+    {
+        if(override)
+        {
+            return work_folder + '/' + task.name + postfix;
+        }
+        else
+        {
+            return work_folder + '/' + task.name + task.part + postfix;
+        }
+    }
+
     console.log("Got work:", task.name, "part:", task.part);
     var dtw_args = task.dtw_args || "";
 
-    var query_path = work_folder + '/' + task.name + "-QUERY";
+    var query_path = gen_filename("-QUERY", options.override_files);
     acquire_and_write_file(task.query, "query", query_path, function()
     {
-        var reference_path = work_folder + '/' + task.name + "-REFERENCE";
+        var reference_path = gen_filename("-REFERENCE", true);
         if(fileExists(reference_path))
         {
             console.log("Using cached reference");
