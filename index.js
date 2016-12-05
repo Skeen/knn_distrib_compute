@@ -6,8 +6,8 @@ var exec = require('child_process').exec;
 var os = require('os');
 
 var options = {};
-options.override_files = false;
-options.server_url = "http://localhost:3001";
+options.override_files = true;
+options.server_url = "http://10.11.110.98:3001";
 options.retry_delay = 10000;
 options.next_delay = 0;
 
