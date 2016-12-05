@@ -20,7 +20,7 @@ var request_task = function()
     {
         console.log();
         console.log("Awainting work...");
-        request(options.server_url + "/awaitTask", function(err, response, body)
+        request(options.server_url + "/awaitTask?name=" + hostname, function(err, response, body)
         {
             if(err)
             {
