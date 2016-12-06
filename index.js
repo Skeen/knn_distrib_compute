@@ -6,13 +6,20 @@ var exec = require('child_process').exec;
 var os = require('os');
 
 var options = {};
-options.override_files = false;
-options.server_url = "http://localhost:3001";
+options.override_files = true;
+options.override_tasks = true;
+options.server_url = "http://10.11.110.98:3001";
 options.retry_delay = 10000;
 options.next_delay = 0;
 
 var hostname = os.hostname();
 console.log("Name:", hostname);
+
+if(options.override_tasks && !options.override_files)
+{
+    console.error("Invalid configuration");
+    process.exit(1);
+}
 
 var request_task = function()
 {
@@ -214,25 +221,29 @@ var prepare_dtw = function(task)
         });
     }
 
-    var gen_filename = function(postfix, override)
+    var gen_filename = function(postfix, override, override_tasks)
     {
-        if(override)
+        if(override && override_tasks)
         {
-            return work_folder + '/' + task.name + postfix;
+            return work_folder + '/' + postfix;
+        }
+        else if (override)
+        {
+            return work_folder + '/' + task.name + "-" + postfix;
         }
         else
         {
-            return work_folder + '/' + task.name + task.part + postfix;
+            return work_folder + '/' + task.name + task.part + "-" + postfix;
         }
     }
 
     console.log("Got work:", task.name, "part:", task.part);
     var dtw_args = task.dtw_args || "";
 
-    var query_path = gen_filename("-QUERY", options.override_files);
+    var query_path = gen_filename("QUERY", options.override_files, options.override_tasks);
     acquire_and_write_file(task.query, "query", query_path, function()
     {
-        var reference_path = gen_filename("-REFERENCE", true);
+        var reference_path = gen_filename("REFERENCE", true, options.override_tasks);
         if(fileExists(reference_path))
         {
             console.log("Using cached reference");
