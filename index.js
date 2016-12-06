@@ -8,7 +8,7 @@ var os = require('os');
 var options = {};
 options.override_files = true;
 options.override_tasks = true;
-options.server_url = "http://10.11.110.98:3001";
+options.server_url = "http://llama09:3001";
 options.retry_delay = 10000;
 options.next_delay = 0;
 
