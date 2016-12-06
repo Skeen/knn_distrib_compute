@@ -15,6 +15,8 @@ options.next_delay = 0;
 var hostname = os.hostname();
 console.log("Name:", hostname);
 
+var old_taskname = null;
+
 if(options.override_tasks && !options.override_files)
 {
     console.error("Invalid configuration");
@@ -192,6 +194,7 @@ var prepare_dtw = function(task)
 
     var run_knn = function(query_path, reference_path, dtw_args)
     {
+        old_taskname = task.name;
         run_knn_dtw(query_path, reference_path, dtw_args, function(err, result)
         {
             if(err)
@@ -240,11 +243,13 @@ var prepare_dtw = function(task)
     console.log("Got work:", task.name, "part:", task.part);
     var dtw_args = task.dtw_args || "";
 
+
     var query_path = gen_filename("QUERY", options.override_files, options.override_tasks);
     acquire_and_write_file(task.query, "query", query_path, function()
     {
         var reference_path = gen_filename("REFERENCE", true, options.override_tasks);
-        if(fileExists(reference_path))
+
+        if(fileExists(reference_path) && old_taskname == task.name)
         {
             console.log("Using cached reference");
             run_knn(query_path, reference_path, dtw_args);
